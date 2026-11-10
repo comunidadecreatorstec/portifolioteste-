@@ -519,7 +519,7 @@
       <div class="section-head reveal">
         <span class="section-no" aria-hidden="true">03</span>
         <h2 class="section-title" id="t-destaques">Conteúdos de <em>destaque</em></h2>
-        <p class="section-sub">Os vídeos que mais renderam nesta edição. Toque no card para assistir no Instagram.</p>
+        <p class="section-sub">Os vídeos que mais renderam nesta edição. Toque no card para assistir.</p>
       </div>
       <!-- Os três cards vêm do array DESTAQUES no script: lá você troca o link do vídeo, a capa e os números -->
       <div class="highlights" id="highlights"></div>
@@ -706,10 +706,10 @@ const DESTAQUES = [
     contexto: 'Marca 02 · uma linha curta sobre o objetivo do vídeo'
   },
   {
-    link: 'https://www.instagram.com/p/Dd4A6C2BfiR/',
+    link: 'https://youtube.com/shorts/-79C7d-MB9Y',
     capa: '',
     numero: '+00K',
-    rotulo: 'views no Instagram',
+    rotulo: 'views no YouTube Shorts',
     titulo: 'Título do destaque 03',
     contexto: 'Marca 03 · uma linha curta sobre o objetivo do vídeo'
   }
@@ -787,7 +787,7 @@ const DEPOIMENTOS = [
 
   /* destaques */
   $('#highlights').innerHTML = DESTAQUES.map((d, i) => `
-    <a class="hl reveal" href="${esc(d.link)}" target="_blank" rel="noopener" aria-label="Assistir ${esc(d.titulo)} no Instagram (abre em nova aba)">
+    <a class="hl reveal" href="${esc(d.link)}" target="_blank" rel="noopener" aria-label="Assistir ${esc(d.titulo)} (abre em nova aba)">
       <div class="ph" style="--g:${degrades[i % degrades.length]}" ${d.capa ? '' : 'role="img" aria-label="Capa do vídeo, formato 9:16"'}>
         ${d.capa ? `<img class="media-img" src="${esc(d.capa)}" alt="Capa do vídeo ${esc(d.titulo)}" loading="lazy">` : ''}
         <span class="hl-no">Destaque ${pad(i + 1)}</span>
