@@ -229,11 +229,20 @@
   /* ============ 3. DESTAQUES ============ */
   .highlights { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(18px, 3vw, 36px); }
   .hl {
-    display: block; text-decoration: none; color: var(--ink); background: var(--card);
+    display: block; color: var(--ink); background: var(--card);
     border: 2px solid var(--line); transition: transform .25s, box-shadow .25s;
   }
   .hl:hover { transform: translate(-3px, -3px); box-shadow: 6px 6px 0 var(--red); }
   .hl .ph { aspect-ratio: 9 / 16; border-bottom: 2px solid var(--line); }
+  /* botão invisível que cobre a capa: clicar dá play no vídeo dentro do card */
+  .hl-open {
+    position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%;
+    background: transparent; border: 0; padding: 0; cursor: pointer;
+  }
+  .hl-open:focus-visible { outline: 3px solid var(--gold); outline-offset: -3px; }
+  .hl .ph.is-playing { background: #000; }
+  .hl .ph.is-playing::after { display: none; }
+  .hl-player { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; z-index: 3; background: #000; }
   .hl-no {
     position: absolute; top: 12px; left: 12px; z-index: 1; background: var(--paper); color: var(--ink);
     font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; font-weight: 600; padding: 4px 8px;
@@ -247,13 +256,13 @@
     content: ""; margin-left: 6px;
     border-style: solid; border-width: 13px 0 13px 21px; border-color: transparent transparent transparent var(--ink);
   }
-  .hl:hover .play { transform: scale(1.08); }
+  .hl:hover .play, .hl-open:focus-visible .play { transform: scale(1.08); }
   .hl-body { padding: 18px 18px 22px; }
   .hl-num { font-family: var(--serif); font-weight: 900; font-size: clamp(2.4rem, 4.5vw, 3.4rem); line-height: 1; color: var(--gold); }
   .hl-label { display: block; font-size: .74rem; letter-spacing: .16em; text-transform: uppercase; font-weight: 600; margin: 6px 0 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
   .hl h3 { font-size: 1.35rem; line-height: 1.15; margin-bottom: 6px; }
   .hl p { font-size: .95rem; color: var(--muted); margin: 0; }
-  .hl-cta { display: inline-block; margin-top: 12px; font-size: .74rem; letter-spacing: .16em; text-transform: uppercase; font-weight: 600; color: var(--gold); }
+  .hl-cta { display: inline-block; margin-top: 12px; text-decoration: none; border-bottom: 1px solid var(--line); padding-bottom: 2px; font-size: .74rem; letter-spacing: .16em; text-transform: uppercase; font-weight: 600; color: var(--gold); }
 
   /* ============ 4. TRABALHOS ============ */
   .filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
@@ -685,14 +694,18 @@ const METRICAS = [
   { valor: 72,  prefixo: '',  sufixo: 'h', rotulo: 'úteis de prazo máximo de entrega', capa: false }
 ];
 
-/* DESTAQUES: os três vídeos grandes.
-   link   = ONDE ENTRA O LINK DO VÍDEO (abre em nova aba)
+/* DESTAQUES: os três vídeos grandes. Clicar na capa dá play no vídeo dentro do próprio card.
+   link   = ONDE ENTRA O LINK DO VÍDEO (Instagram ou YouTube). O site monta o player a partir dele.
+   video  = OPCIONAL: caminho de um arquivo MP4 seu, salvo na mesma pasta (ex.: 'video-1.mp4').
+            Se preencher, o site usa o player próprio, com play, pausa, volume e tela cheia.
+            Deixe '' para usar o player do Instagram ou do YouTube.
    capa   = ONDE ENTRA A CAPA: coloque o caminho da imagem vertical 9:16, ex.: 'capa-1.jpg'.
             Deixe '' para mostrar o bloco em degradê.
    numero e rotulo = PLACEHOLDER: troque pelo número real de cada vídeo (ex.: '+250K' e 'views no reels'). */
 const DESTAQUES = [
   {
     link: 'https://www.instagram.com/p/DerfyNeRNN8/',
+    video: '',
     capa: '',
     numero: '+00K',
     rotulo: 'views no Instagram',
@@ -701,6 +714,7 @@ const DESTAQUES = [
   },
   {
     link: 'https://www.instagram.com/p/DeCZ10CBlKB/',
+    video: '',
     capa: '',
     numero: '+00K',
     rotulo: 'views no Instagram',
@@ -709,6 +723,7 @@ const DESTAQUES = [
   },
   {
     link: 'https://youtube.com/shorts/-79C7d-MB9Y',
+    video: '',
     capa: '',
     numero: '+00K',
     rotulo: 'views no YouTube Shorts',
@@ -788,22 +803,58 @@ const DEPOIMENTOS = [
     .map((m) => `<li class="metric">${numHTML(m)}<span class="stat-label">${esc(m.rotulo)}</span></li>`).join('');
 
   /* destaques */
+  /* descobre o player certo a partir do link */
+  function embedDoLink(link) {
+    const yt = String(link).match(/(?:shorts\/|youtu\.be\/|[?&]v=|embed\/)([\w-]{11})/);
+    if (yt) return { nome: 'YouTube', url: `https://www.youtube-nocookie.com/embed/${yt[1]}?autoplay=1&playsinline=1&rel=0` };
+    const ig = String(link).match(/instagram\.com\/(?:p|reel|reels|tv)\/([\w-]+)/);
+    if (ig) return { nome: 'Instagram', url: `https://www.instagram.com/p/${ig[1]}/embed/` };
+    return { nome: 'o site original', url: '' };
+  }
+
   $('#highlights').innerHTML = DESTAQUES.map((d, i) => `
-    <a class="hl reveal" href="${esc(d.link)}" target="_blank" rel="noopener" aria-label="Assistir ${esc(d.titulo)} (abre em nova aba)">
-      <div class="ph" style="--g:${degrades[i % degrades.length]}" ${d.capa ? '' : 'role="img" aria-label="Capa do vídeo, formato 9:16"'}>
-        ${d.capa ? `<img class="media-img" src="${esc(d.capa)}" alt="Capa do vídeo ${esc(d.titulo)}" loading="lazy">` : ''}
+    <article class="hl reveal">
+      <div class="ph" data-i="${i}" style="--g:${degrades[i % degrades.length]}">
+        ${d.capa ? `<img class="media-img" src="${esc(d.capa)}" alt="" loading="lazy">` : ''}
         <span class="hl-no">Destaque ${pad(i + 1)}</span>
-        <span class="play" aria-hidden="true"></span>
         ${d.capa ? '' : '<span class="ph-label">capa do vídeo 9:16</span>'}
+        <button class="hl-open" type="button" aria-label="Dar play em ${esc(d.titulo)} aqui na página">
+          <span class="play" aria-hidden="true"></span>
+        </button>
       </div>
       <div class="hl-body">
         <span class="hl-num">${esc(d.numero)}</span>
         <span class="hl-label">${esc(d.rotulo)}</span>
         <h3>${esc(d.titulo)}</h3>
         <p>${esc(d.contexto)}</p>
-        <span class="hl-cta">Assistir ao vídeo</span>
+        <a class="hl-cta" href="${esc(d.link)}" target="_blank" rel="noopener">Ver no ${esc(embedDoLink(d.link).nome)}</a>
       </div>
-    </a>`).join('');
+    </article>`).join('');
+
+  /* fecha o vídeo que estiver tocando e volta a mostrar a capa */
+  function fecharVideos() {
+    document.querySelectorAll('.hl .ph.is-playing').forEach((ph) => {
+      ph.innerHTML = ph.dataset.capaHtml;
+      ph.classList.remove('is-playing');
+    });
+  }
+
+  /* clicar na capa troca a capa pelo player, ali mesmo no card */
+  $('#highlights').addEventListener('click', (e) => {
+    const botao = e.target.closest('.hl-open');
+    if (!botao) return;
+    const ph = botao.closest('.ph');
+    const d = DESTAQUES[ph.dataset.i];
+    const emb = embedDoLink(d.link);
+    if (!d.video && !emb.url) { window.open(d.link, '_blank', 'noopener'); return; }
+    fecharVideos();
+    ph.dataset.capaHtml = ph.innerHTML;
+    ph.classList.add('is-playing');
+    ph.innerHTML = d.video
+      ? `<video class="hl-player" src="${esc(d.video)}" controls autoplay playsinline ${d.capa ? `poster="${esc(d.capa)}"` : ''}></video>`
+      : `<iframe class="hl-player" src="${esc(emb.url)}" title="Vídeo: ${esc(d.titulo)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" scrolling="no"></iframe>`;
+    ph.querySelector('.hl-player').focus();
+  });
 
   /* trabalhos + filtros */
   const nichos = ['Todos', ...new Set(TRABALHOS.map((t) => t.nicho))];
