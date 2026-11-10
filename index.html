@@ -195,14 +195,14 @@
 
   /* faixa com nomes das marcas */
   .brands { margin-top: clamp(40px, 6vw, 72px); background: var(--card); color: var(--gold); overflow: hidden; }
-  /* faixa sempre em movimento (para mudar a velocidade, troque os 30s: menor = mais rápido) */
-  .brands-inner { display: flex; width: max-content; animation: marquee 30s linear infinite; will-change: transform; }
+  .brands-inner { display: flex; width: max-content; animation: marquee 32s linear infinite; }
   .brands ul { display: flex; align-items: center; }
   .brands li {
     padding: 12px 22px; font-family: var(--serif); font-weight: 700; font-style: italic; font-size: 1.05rem; white-space: nowrap;
   }
   .brands li::after { content: "★"; color: var(--gold); font-style: normal; margin-left: 44px; font-size: .8rem; }
   @keyframes marquee { to { transform: translateX(-50%); } }
+  .brands:hover .brands-inner { animation-play-state: paused; }
 
   /* ============ SEÇÕES (filete duplo) ============ */
   .section { padding: clamp(64px, 9vw, 120px) 0; border-top: 6px double var(--gold); }
@@ -397,8 +397,7 @@
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-    /* a faixa de marcas continua andando mesmo aqui, só que mais devagar */
-    .brands-inner { animation: marquee 60s linear infinite !important; }
+    .brands-inner { animation: none; }
     .js .reveal { opacity: 1; transform: none; }
   }
 </style>
