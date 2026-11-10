@@ -13,8 +13,8 @@
 <style>
   /* ============ CORES E MEDIDAS ============ */
   :root {
-    --paper: #f4f1eb;
-    --paper-2: #ebe6dc;
+    --paper: #faf3d2;      /* fundo amarelo fraco */
+    --paper-2: #f2e6b0;    /* amarelo um pouco mais forte (hover dos filtros) */
     --ink: #111111;
     --muted: #4a4642;
     --red: #e2231a;        /* vermelho de banca: títulos grandes, botões, detalhes */
@@ -239,7 +239,7 @@
   .play {
     position: absolute; z-index: 1; top: 50%; left: 50%; width: 76px; height: 76px; margin: -38px 0 0 -38px;
     border-radius: 50%; background: var(--red); display: grid; place-items: center;
-    box-shadow: 0 0 0 6px rgba(244,241,235,.35); transition: transform .25s;
+    box-shadow: 0 0 0 6px rgba(250,243,210,.35); transition: transform .25s;
   }
   .play::before {
     content: ""; margin-left: 6px;
@@ -324,7 +324,7 @@
 
   /* ============ 8. RODAPÉ ============ */
   .footer { background: var(--ink); color: var(--paper); padding: 48px 0 28px; border-top: 6px double var(--red); }
-  .footer-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 24px; padding-bottom: 24px; border-bottom: 1px solid rgba(244,241,235,.3); }
+  .footer-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 24px; padding-bottom: 24px; border-bottom: 1px solid rgba(250,243,210,.3); }
   .footer-name { font-family: var(--serif); font-weight: 900; font-size: clamp(2.2rem, 6vw, 4rem); line-height: .9; }
   .footer-name em { color: var(--red); }
   .socials { display: flex; flex-wrap: wrap; gap: 10px 22px; }
