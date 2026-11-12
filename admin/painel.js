@@ -91,8 +91,30 @@
 
   /* ---------- avisos e mensagens rápidas ---------- */
   const avisosVistos = new Set();
+  /* tabelas que o banco disse que não existem: viram UM aviso só, com o passo a passo */
+  const faltando = new Set();
+  function avisarFaltando(tabela) {
+    faltando.add(tabela);
+    let el = document.getElementById('aviso-faltando');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'aviso-faltando';
+      el.className = 'aviso';
+      $('#avisos').prepend(el);
+    }
+    const lista = Array.from(faltando).map((t) => '"' + t + '"').join(', ');
+    el.innerHTML = '<span><b>O banco ainda não está montado.</b> ' +
+      (faltando.size === 1 ? 'Falta a tabela ' : 'Faltam as tabelas ') + esc(lista) + '. ' +
+      'No Supabase, abra SQL Editor, clique em New query, cole o arquivo banco.sql inteiro e clique em Run. ' +
+      'Se aparecer um aviso falando de "destructive operation", clique pra confirmar. ' +
+      'Enquanto isso, o resto do painel continua funcionando.</span>' +
+      '<button type="button" class="btn">Já rodei, recarregar</button>';
+    el.querySelector('button').addEventListener('click', () => location.reload());
+  }
+
   function avisar(texto) {
     if (!texto || avisosVistos.has(texto)) return;
+    if (/^A tabela ".*" ainda não existe/.test(texto)) return; /* já está no aviso único */
     avisosVistos.add(texto);
     const el = document.createElement('div');
     el.className = 'aviso';
@@ -115,7 +137,8 @@
     const code = String((err && err.code) || '');
     const msg = String((err && err.message) || err || '');
     if (code === 'PGRST205' || code === '42P01' || /could not find the table|relation .* does not exist/i.test(msg)) {
-      return 'A tabela "' + tabela + '" não existe no banco. Rode o arquivo banco.sql no SQL Editor do Supabase. O resto do painel continua funcionando.';
+      avisarFaltando(tabela);
+      return 'A tabela "' + tabela + '" ainda não existe no banco. Rode o banco.sql no Supabase.';
     }
     if (code === 'PGRST204' || code === '42703' || /column/i.test(msg)) {
       const m = msg.match(/'([^']+)' column|column "?([\w.]+)"?/i);
@@ -380,7 +403,10 @@
 
   function iniciar(sessao) {
     $$('[data-icone]').forEach((el) => { el.outerHTML = icone(el.dataset.icone); });
-    $('#eu-email').textContent = (sessao.user && sessao.user.email) || '';
+    /* o e-mail quebra de linha no @, nunca no meio da palavra */
+    const email = (sessao.user && sessao.user.email) || '';
+    $('#eu-email').innerHTML = esc(email).replace('@', '<wbr>@');
+    $('#eu-email').title = email;
     $('#btn-sair').addEventListener('click', async () => {
       try { await db.auth.signOut(); } catch (e) { /* segue */ }
       location.replace('../login/');

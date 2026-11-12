@@ -67,7 +67,7 @@ svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none;
 .menu-pe { border-top: 1px solid var(--line); padding: 12px 20px 16px; display: grid; gap: 8px; }
 .menu-site { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); text-decoration: none; }
 .menu-site:hover { color: var(--gold); }
-.menu-email { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.menu-email { font-size: 12px; color: var(--muted); overflow-wrap: normal; word-break: normal; }
 .menu-sair {
   display: inline-flex; align-items: center; gap: 8px; justify-self: start;
   background: none; border: 1px solid var(--line); padding: 6px 12px; cursor: pointer; font-size: 12px;
@@ -87,7 +87,9 @@ svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none;
   border-left: 3px solid var(--c-amarelo); background: rgba(226,193,90,.1);
 }
 .aviso span { flex: 1; }
-.aviso button { background: none; border: 0; cursor: pointer; padding: 0 2px; color: var(--muted); font-size: 16px; line-height: 1; }
+.aviso b { font-weight: 600; }
+#aviso-faltando { align-items: center; flex-wrap: wrap; }
+.aviso button:not(.btn) { background: none; border: 0; cursor: pointer; padding: 0 2px; color: var(--muted); font-size: 16px; line-height: 1; }
 
 /* ============ BOTÕES E CAMPOS ============ */
 .btn {
