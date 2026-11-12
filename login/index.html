@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Entrar · Painel</title>
+<meta name="theme-color" content="#0D0D0D">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --paper: #0D0D0D;
+    --card: #1A1A1A;
+    --ink: #F5F0E6;
+    --muted: #BDB6A8;
+    --gold: #C9A54C;
+    --red: #C1121F;
+    --line: rgba(201,165,76,.35);
+    --sans: 'Jost', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink); font: 400 14px/1.5 var(--sans);
+    display: grid; place-items: center; padding: 16px; -webkit-font-smoothing: antialiased;
+  }
+  body.conferindo .card { visibility: hidden; }
+  .card { width: min(360px, 100%); background: var(--card); border: 1px solid var(--line); padding: 28px 24px 22px; }
+  .marca { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin: 0 0 4px; }
+  h1 { font-size: 18px; font-weight: 500; margin: 0 0 20px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 4px; }
+  input {
+    width: 100%; font: 400 14px/1.4 var(--sans); color: var(--ink); background: var(--paper);
+    border: 1px solid var(--line); border-radius: 0; padding: 10px 12px; margin-bottom: 14px;
+  }
+  input:focus-visible, button:focus-visible, .link:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .btn {
+    width: 100%; min-height: 42px; border: 1px solid var(--gold); background: var(--gold); color: var(--paper);
+    font: 600 13px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; cursor: pointer;
+  }
+  .btn:hover { background: #d8b65e; }
+  .btn[disabled] { opacity: .6; cursor: wait; }
+  .faixa { font-size: 13px; padding: 9px 12px; margin: 0 0 14px; border-left: 3px solid var(--red); background: rgba(193,18,31,.14); }
+  .faixa.ok { border-left-color: var(--gold); background: rgba(201,165,76,.12); }
+  .faixa[hidden] { display: none; }
+  .rodape { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: 12px; }
+  .link { background: none; border: 0; padding: 0; color: var(--muted); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  .link:hover { color: var(--gold); }
+  a.link { text-decoration: underline; }
+  form[hidden] { display: none; }
+</style>
+</head>
+<body class="conferindo">
+
+<main class="card">
+  <p class="marca">Painel da creator</p>
+  <h1 id="titulo">Entrar</h1>
+
+  <p class="faixa" id="faixa" role="alert" hidden></p>
+
+  <!-- entrar -->
+  <form id="form-entrar" novalidate>
+    <label for="email">E-mail</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="senha">Senha</label>
+    <input id="senha" type="password" autocomplete="current-password" required>
+    <button class="btn" type="submit" id="btn-entrar">Entrar</button>
+    <div class="rodape">
+      <button class="link" type="button" id="btn-esqueci">Esqueci minha senha</button>
+      <a class="link" href="../">Ver o site</a>
+    </div>
+  </form>
+
+  <!-- nova senha (aparece quando a pessoa chega pelo link do e-mail de recuperação) -->
+  <form id="form-nova" novalidate hidden>
+    <label for="nova">Nova senha</label>
+    <input id="nova" type="password" autocomplete="new-password" minlength="6" required>
+    <label for="nova2">Repita a nova senha</label>
+    <input id="nova2" type="password" autocomplete="new-password" minlength="6" required>
+    <button class="btn" type="submit" id="btn-nova">Salvar nova senha</button>
+  </form>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.76.1/dist/umd/supabase.min.js"></script>
+<script src="../js/banco.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var faixa = $('faixa');
+  var veioDoEmail = /type=recovery/.test(location.hash) || /type=recovery/.test(location.search);
+
+  function aviso(texto, ok) {
+    faixa.textContent = texto;
+    faixa.classList.toggle('ok', !!ok);
+    faixa.hidden = !texto;
+  }
+  function mostrar() { document.body.classList.remove('conferindo'); }
+  function irProAdmin() { location.replace('../admin/'); }
+  function modoNovaSenha() {
+    $('form-entrar').hidden = true;
+    $('form-nova').hidden = false;
+    $('titulo').textContent = 'Criar nova senha';
+    mostrar();
+    $('nova').focus();
+  }
+
+  if (!window.banco) {
+    aviso('Não consegui falar com o banco agora. Confira a internet e recarregue a página.');
+    mostrar();
+    return;
+  }
+
+  /* quando a pessoa chega pelo link de recuperação, o Supabase avisa aqui */
+  window.banco.auth.onAuthStateChange(function (evento) {
+    if (evento === 'PASSWORD_RECOVERY') { veioDoEmail = true; modoNovaSenha(); }
+  });
+
+  /* já tem sessão aberta? vai direto pro painel */
+  window.banco.auth.getSession().then(function (r) {
+    var sessao = r && r.data && r.data.session;
+    if (veioDoEmail) { modoNovaSenha(); return; }
+    if (sessao) { irProAdmin(); return; }
+    mostrar();
+    $('email').focus();
+  }).catch(function () { mostrar(); });
+
+  /* entrar */
+  $('form-entrar').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var email = $('email').value.trim();
+    var senha = $('senha').value;
+    if (!email || !senha) { aviso('Preencha o e-mail e a senha.'); return; }
+    var btn = $('btn-entrar');
+    btn.disabled = true; btn.textContent = 'Entrando...';
+    aviso('');
+    window.banco.auth.signInWithPassword({ email: email, password: senha }).then(function (r) {
+      if (r.error) {
+        var msg = String(r.error.message || '').toLowerCase();
+        if (msg.indexOf('confirm') > -1) aviso('Este e-mail ainda não foi confirmado no Supabase.');
+        else if (msg.indexOf('fetch') > -1 || msg.indexOf('network') > -1) aviso('Sem conexão com o banco. Confira a internet e tente de novo.');
+        else aviso('E-mail ou senha incorretos');
+        btn.disabled = false; btn.textContent = 'Entrar';
+        return;
+      }
+      irProAdmin();
+    }).catch(function () {
+      aviso('Sem conexão com o banco. Confira a internet e tente de novo.');
+      btn.disabled = false; btn.textContent = 'Entrar';
+    });
+  });
+
+  /* esqueci minha senha */
+  $('btn-esqueci').addEventListener('click', function () {
+    var email = $('email').value.trim();
+    if (!email) { aviso('Escreva o seu e-mail no campo acima e clique de novo em "Esqueci minha senha".'); $('email').focus(); return; }
+    var volta = location.origin + location.pathname;
+    window.banco.auth.resetPasswordForEmail(email, { redirectTo: volta }).then(function (r) {
+      if (r.error) {
+        var msg = String(r.error.message || '').toLowerCase();
+        if (msg.indexOf('rate') > -1 || msg.indexOf('seconds') > -1) aviso('Você pediu agora há pouco. Espere um minuto e tente de novo.');
+        else aviso('Não consegui enviar o e-mail agora. Tente de novo em alguns minutos.');
+        return;
+      }
+      aviso('Pronto! Se esse e-mail tiver cadastro, chega um link pra criar uma senha nova. Olhe também a caixa de spam.', true);
+    });
+  });
+
+  /* salvar a nova senha */
+  $('form-nova').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var a = $('nova').value, b = $('nova2').value;
+    if (a.length < 6) { aviso('A senha precisa ter pelo menos 6 caracteres.'); return; }
+    if (a !== b) { aviso('As duas senhas não estão iguais.'); return; }
+    var btn = $('btn-nova');
+    btn.disabled = true; btn.textContent = 'Salvando...';
+    window.banco.auth.updateUser({ password: a }).then(function (r) {
+      btn.disabled = false; btn.textContent = 'Salvar nova senha';
+      if (r.error) {
+        var msg = String(r.error.message || '').toLowerCase();
+        if (msg.indexOf('different') > -1 || msg.indexOf('same') > -1) aviso('A nova senha precisa ser diferente da antiga.');
+        else if (msg.indexOf('session') > -1 || msg.indexOf('expired') > -1) aviso('O link do e-mail expirou. Volte e peça um novo em "Esqueci minha senha".');
+        else aviso('Não consegui salvar a senha. Tente uma senha mais forte.');
+        return;
+      }
+      aviso('Senha nova salva. Abrindo o painel...', true);
+      setTimeout(irProAdmin, 900);
+    });
+  });
+})();
+</script>
+</body>
+</html>

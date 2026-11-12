@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR" class="travado">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Painel</title>
+<meta name="theme-color" content="#0D0D0D">
+<!-- a página fica invisível até o script conferir que você está logada -->
+<style>html.travado body { visibility: hidden; }</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="painel.css">
+</head>
+<body>
+
+<div class="app">
+  <!-- ============ MENU LATERAL ============ -->
+  <aside class="menu" id="menu" aria-label="Menu do painel">
+    <div class="menu-topo">
+      <span class="menu-marca">Painel</span>
+      <span class="menu-sub">da creator</span>
+    </div>
+    <nav class="menu-nav">
+      <p class="menu-secao">meu site</p>
+      <a href="#portfolio" data-aba="portfolio"><span data-icone="grade"></span>Portfólio</a>
+      <a href="#marcas" data-aba="marcas"><span data-icone="pessoas"></span>Marcas</a>
+      <p class="menu-secao">minha rotina</p>
+      <a href="#calendario" data-aba="calendario"><span data-icone="calendario"></span>Calendário</a>
+      <a href="#campanhas" data-aba="campanhas"><span data-icone="maleta"></span>Campanhas</a>
+      <a href="#checklist" data-aba="checklist"><span data-icone="checar"></span>Checklist</a>
+    </nav>
+    <div class="menu-pe">
+      <a class="menu-site" href="../" target="_blank" rel="noopener"><span data-icone="externo"></span>Ver o meu site</a>
+      <span class="menu-email" id="eu-email"></span>
+      <button class="menu-sair" type="button" id="btn-sair"><span data-icone="sair"></span>Sair</button>
+    </div>
+  </aside>
+  <div class="veu" id="veu" hidden></div>
+
+  <!-- ============ CONTEÚDO ============ -->
+  <div class="conteudo">
+    <header class="topo">
+      <button class="btn-gaveta" type="button" id="btn-gaveta" aria-controls="menu" aria-expanded="false" aria-label="Abrir menu"><span data-icone="menu"></span></button>
+      <h1 id="titulo-aba">Portfólio</h1>
+    </header>
+    <div class="avisos" id="avisos" aria-live="polite"></div>
+    <main>
+      <section class="aba" data-aba="portfolio" hidden></section>
+      <section class="aba" data-aba="marcas" hidden></section>
+      <section class="aba" data-aba="calendario" hidden></section>
+      <section class="aba" data-aba="campanhas" hidden></section>
+      <section class="aba" data-aba="checklist" hidden></section>
+    </main>
+  </div>
+</div>
+
+<div id="modal-raiz"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.76.1/dist/umd/supabase.min.js"></script>
+<script src="../js/banco.js"></script>
+<script src="../js/biblioteca.js"></script>
+<script src="painel.js"></script>
+</body>
+</html>

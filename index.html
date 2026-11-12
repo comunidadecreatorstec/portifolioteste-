@@ -610,11 +610,9 @@
 
         <div class="form reveal" id="contact-box">
           <!--
-            O formulário mostra a confirmação na tela, mas não envia e-mail sozinho.
-            Para receber as mensagens de verdade, crie um formulário grátis no Formspree
-            e coloque o endereço dele no atributo action abaixo (o script já envia por fetch quando existir).
+            Quem manda este formulário entra sozinho na aba Marcas do seu painel, como Lead.
           -->
-          <form id="contact-form" action="" novalidate>
+          <form id="contact-form" novalidate>
             <div class="field">
               <label for="c-nome">Nome</label>
               <input id="c-nome" name="nome" type="text" autocomplete="name" required>
@@ -685,6 +683,9 @@
   </div>
 </div>
 
+<!-- ligação com o banco do painel (o endereço e a chave ficam em js/banco.js) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.76.1/dist/umd/supabase.min.js"></script>
+<script src="js/banco.js"></script>
 <script>
 /* =====================================================================
    SEUS DADOS: edite só esta parte. O HTML é montado a partir daqui.
@@ -798,6 +799,14 @@ const DEPOIMENTOS = [
   ];
   const pad = (n) => String(n).padStart(2, '0');
 
+  /* animação de entrada para os cards que chegam do banco depois que a página abriu */
+  var ioReveal = null;
+  function observarNovos(caixa) {
+    caixa.querySelectorAll('.reveal:not(.is-visible)').forEach((el) => {
+      if (ioReveal) ioReveal.observe(el); else el.classList.add('is-visible');
+    });
+  }
+
   /* ano automático */
   $('#ano').textContent = new Date().getFullYear();
 
@@ -827,7 +836,11 @@ const DEPOIMENTOS = [
     return { nome: 'o site original', url: '' };
   }
 
-  $('#highlights').innerHTML = DESTAQUES.map((d, i) => `
+  /* a lista que está na tela agora (vem do banco ou, se o banco não tiver vídeos, do DESTAQUES acima) */
+  let destaquesAtuais = [];
+  function montarDestaques(lista) {
+  destaquesAtuais = lista;
+  $('#highlights').innerHTML = lista.map((d, i) => `
     <article class="hl reveal">
       <div class="ph" data-i="${i}" style="--g:${degrades[i % degrades.length]}">
         ${d.capa ? `<img class="media-img" src="${esc(d.capa)}" alt="" loading="lazy">` : ''}
@@ -843,9 +856,22 @@ const DEPOIMENTOS = [
         <span class="hl-label">${esc(d.rotulo)}</span>
         <h3>${esc(d.titulo)}</h3>
         <p>${esc(d.contexto)}</p>
-        <a class="hl-cta" href="${esc(d.link)}" target="_blank" rel="noopener">Ver no ${esc(embedDoLink(d.link).nome)}</a>
+        ${d.link ? `<a class="hl-cta" href="${esc(d.link)}" target="_blank" rel="noopener">Ver no ${esc(embedDoLink(d.link).nome)}</a>` : ''}
       </div>
     </article>`).join('');
+
+  /* prévia sem som ao passar o mouse (só em computador, onde existe mouse) */
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    document.querySelectorAll('.hl .ph').forEach((ph) => {
+      ph.addEventListener('mouseenter', () => {
+        if (ph.classList.contains('is-playing')) return;
+        ph._previaTimer = setTimeout(() => abrirPrevia(ph), 250);
+      });
+      ph.addEventListener('mouseleave', () => fecharPrevia(ph));
+    });
+  }
+  observarNovos($('#highlights'));
+  }
 
   /* fecha o vídeo que estiver tocando e volta a mostrar a capa */
   function fecharVideos() {
@@ -861,9 +887,10 @@ const DEPOIMENTOS = [
     if (!botao) return;
     const ph = botao.closest('.ph');
     fecharPrevia(ph);
-    const d = DESTAQUES[ph.dataset.i];
+    const d = destaquesAtuais[ph.dataset.i];
+    if (!d) return;
     const emb = embedDoLink(d.link);
-    if (!d.video && !emb.url) { window.open(d.link, '_blank', 'noopener'); return; }
+    if (!d.video && !emb.url) { if (d.link) window.open(d.link, '_blank', 'noopener'); return; }
     fecharVideos();
     ph.dataset.capaHtml = ph.innerHTML;
     ph.classList.add('is-playing');
@@ -883,7 +910,8 @@ const DEPOIMENTOS = [
   }
   function abrirPrevia(ph) {
     if (ph.classList.contains('is-playing') || ph.querySelector('.hl-preview')) return;
-    const d = DESTAQUES[ph.dataset.i];
+    const d = destaquesAtuais[ph.dataset.i];
+    if (!d) return;
     const emb = embedDoLink(d.link);
     let html = '';
     if (d.video) html = `<video src="${esc(d.video)}" muted loop playsinline autoplay></video>`;
@@ -899,21 +927,12 @@ const DEPOIMENTOS = [
     /* só aparece quando o vídeo já carregou, para não piscar preto */
     midia.addEventListener(d.video ? 'playing' : 'load', () => box.classList.add('on'), { once: true });
   }
-  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-    document.querySelectorAll('.hl .ph').forEach((ph) => {
-      ph.addEventListener('mouseenter', () => {
-        if (ph.classList.contains('is-playing')) return;
-        ph._previaTimer = setTimeout(() => abrirPrevia(ph), 250);
-      });
-      ph.addEventListener('mouseleave', () => fecharPrevia(ph));
-    });
-  }
-
   /* trabalhos + filtros */
-  const nichos = ['Todos', ...new Set(TRABALHOS.map((t) => t.nicho))];
+  function montarTrabalhos(lista) {
+  const nichos = ['Todos', ...new Set(lista.map((t) => t.nicho).filter(Boolean))];
   $('#filters').innerHTML = nichos.map((n, i) =>
     `<button class="filter" type="button" data-nicho="${esc(n)}" aria-pressed="${i === 0}">${esc(n)}</button>`).join('');
-  $('#works').innerHTML = TRABALHOS.map((t, i) => {
+  $('#works').innerHTML = lista.map((t, i) => {
     const midia = t.imagem
       ? `<img class="media-img" src="${esc(t.imagem)}" alt="${esc(t.titulo)} para ${esc(t.marca)}" loading="lazy">`
       : `<span class="ph-label">${esc(t.formato)}</span>`;
@@ -924,10 +943,12 @@ const DEPOIMENTOS = [
       <div class="work-body">
         <span class="work-tag">${esc(t.nicho)}</span>
         <h3>${titulo}</h3>
-        <p>${esc(t.marca)} · ${esc(t.formato)}</p>
+        <p>${[t.marca, t.formato].filter(Boolean).map(esc).join(' · ')}</p>
       </div>
     </article>`;
   }).join('');
+  filtrar('Todos');
+  }
 
   const status = $('#filter-status');
   function filtrar(nicho) {
@@ -948,7 +969,52 @@ const DEPOIMENTOS = [
     const b = e.target.closest('.filter');
     if (b) filtrar(b.dataset.nicho);
   });
-  filtrar('Todos');
+
+  /* =====================================================================
+     VÍDEOS DO PAINEL
+     O site pede ao banco os vídeos marcados como visíveis, na ordem do painel.
+     Os que têm "destaque" preenchido viram os cards grandes (até 3).
+     Se o banco ainda não tiver nenhum vídeo visível, ou não responder,
+     o site mostra as listas DESTAQUES e TRABALHOS lá de cima.
+     ===================================================================== */
+  let fonteEscolhida = false;
+  function usarListasFixas() {
+    if (fonteEscolhida) return;
+    fonteEscolhida = true;
+    montarDestaques(DESTAQUES);
+    montarTrabalhos(TRABALHOS);
+  }
+  function usarVideosDoBanco(videos) {
+    fonteEscolhida = true;
+    const comDestaque = videos.filter((v) => String(v.destaque || '').trim());
+    const grandes = (comDestaque.length ? comDestaque : videos).slice(0, 3);
+    montarDestaques(grandes.map((v) => {
+      const partes = String(v.destaque || '').trim().match(/^(\S+)\s*(.*)$/);
+      return {
+        link: v.link || '', video: '', capa: '',
+        numero: partes ? partes[1] : '',
+        rotulo: partes ? partes[2] : '',
+        titulo: v.titulo || '',
+        contexto: [v.marca, v.nicho].filter(Boolean).join(' · ')
+      };
+    }));
+    montarTrabalhos(videos.map((v) => ({
+      titulo: v.titulo || '', marca: v.marca || '', nicho: v.nicho || '',
+      formato: v.formato || 'vídeo', imagem: '', link: v.link || ''
+    })));
+  }
+  if (window.banco) {
+    const espera = setTimeout(usarListasFixas, 6000);
+    window.banco.from('videos').select('*').eq('visivel', true).then(({ data, error }) => {
+      clearTimeout(espera);
+      if (fonteEscolhida) return;
+      if (error || !data || !data.length) { usarListasFixas(); return; }
+      data.sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0) || (Number(a.id) || 0) - (Number(b.id) || 0));
+      usarVideosDoBanco(data);
+    }, () => { clearTimeout(espera); usarListasFixas(); });
+  } else {
+    usarListasFixas();
+  }
 
   /* serviços */
   $('#services').innerHTML = SERVICOS.map((s, i) => `
@@ -979,12 +1045,12 @@ const DEPOIMENTOS = [
   if (reduzMovimento || !('IntersectionObserver' in window)) {
     reveals.forEach((el) => el.classList.add('is-visible'));
   } else {
-    const io = new IntersectionObserver((entradas) => {
+    ioReveal = new IntersectionObserver((entradas) => {
       entradas.forEach((en) => {
-        if (en.isIntersecting) { en.target.classList.add('is-visible'); io.unobserve(en.target); }
+        if (en.isIntersecting) { en.target.classList.add('is-visible'); ioReveal.unobserve(en.target); }
       });
     }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-    reveals.forEach((el) => io.observe(el));
+    reveals.forEach((el) => ioReveal.observe(el));
   }
 
   /* contador animado */
@@ -1035,19 +1101,41 @@ const DEPOIMENTOS = [
     return true;
   }
 
-  /* formulário de contato: confirma na tela, sem recarregar */
+  /* guarda um contato na tabela "marcas" do painel, como Lead */
+  async function guardarLead(nome, email, obs) {
+    if (!window.banco) return false;
+    const d = new Date();
+    const hoje = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    try {
+      const { error } = await window.banco.from('marcas').insert({
+        nome: nome.slice(0, 200), email: email.slice(0, 200), situacao: 'lead',
+        obs: obs.slice(0, 3000), ultimo_contato: hoje
+      });
+      return !error;
+    } catch (err) { return false; }
+  }
+
+  /* formulário de contato: entra na sua base de marcas como Lead e confirma na tela */
   const cForm = $('#contact-form');
-  cForm.addEventListener('submit', (e) => {
+  cForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!valido(cForm, $('#form-error'))) return;
-    const destino = cForm.getAttribute('action');
-    if (destino) {
-      fetch(destino, { method: 'POST', body: new FormData(cForm), headers: { Accept: 'application/json' } }).catch(() => {});
+    const btn = cForm.querySelector('button[type="submit"]');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    const ok = await guardarLead(
+      cForm.elements.nome.value.trim(),
+      cForm.elements.email.value.trim(),
+      'Mensagem pelo site: ' + cForm.elements.mensagem.value.trim().slice(0, 2900)
+    );
+    btn.disabled = false; btn.textContent = 'Enviar mensagem';
+    if (!ok) {
+      $('#form-error').textContent = 'Não consegui enviar agora. Tenta de novo em instantes ou me chama no WhatsApp.';
+      return;
     }
     cForm.hidden = true;
-    const ok = $('#contact-success');
-    ok.hidden = false;
-    ok.focus();
+    const sucesso = $('#contact-success');
+    sucesso.hidden = false;
+    sucesso.focus();
   });
 
   /* card de captura do mídia kit */
@@ -1075,9 +1163,15 @@ const DEPOIMENTOS = [
       else if (!e.shiftKey && document.activeElement === ult) { e.preventDefault(); prim.focus(); }
     }
   });
-  $('#kit-form').addEventListener('submit', (e) => {
+  $('#kit-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!valido(e.target, $('#kit-error'))) return;
+    const kForm = e.target;
+    if (!valido(kForm, $('#kit-error'))) return;
+    const btn = kForm.querySelector('button[type="submit"]');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    const ok = await guardarLead(kForm.elements.nome.value.trim(), kForm.elements.email.value.trim(), 'Pediu o mídia kit pelo site.');
+    btn.disabled = false; btn.textContent = 'Quero receber';
+    if (!ok) { $('#kit-error').textContent = 'Não consegui enviar agora. Tenta de novo em instantes.'; return; }
     $('#kit-content').innerHTML =
       '<h2 id="kit-title" tabindex="-1">Prontinho, <em>obrigada!</em></h2><p role="status">O mídia kit vai chegar no seu e-mail em breve. Enquanto isso, dá uma olhada nos meus destaques.</p>';
     $('#kit-title').focus();
@@ -1092,6 +1186,48 @@ const DEPOIMENTOS = [
       abrirModal();
     }, 7000);
   }
+
+  /* =====================================================================
+     REGISTRO DE VISITA
+     Grava só a data, a página e de onde a pessoa veio. Nada do visitante.
+     Conta uma vez por visita, não conta quando você está logada no painel
+     e não conta quando o site está aberto no seu computador (teste).
+     Dica: no link da bio, use o endereço do site com ?utm_source=instagram
+     no final, assim o painel sabe com certeza que a pessoa veio do Instagram.
+     ===================================================================== */
+  (function registrarVisita() {
+    if (!window.banco) return;
+    const h = location.hostname;
+    if (location.protocol === 'file:' || !h || h === 'localhost' || h === '127.0.0.1' || h === '[::1]') return;
+    const chave = 'visitaContada:' + location.pathname;
+    try { if (sessionStorage.getItem(chave)) return; sessionStorage.setItem(chave, '1'); } catch (err) { /* segue */ }
+
+    function nomeDaOrigem(t) {
+      const s = String(t || '').toLowerCase().replace(/^www\./, '');
+      if (!s) return 'Direto';
+      if (s.includes('instagram')) return 'Instagram';
+      if (s.includes('tiktok')) return 'TikTok';
+      if (s.includes('whatsapp') || s.includes('wa.me')) return 'WhatsApp';
+      if (s.includes('google')) return 'Google';
+      if (s.includes('youtube') || s.includes('youtu.be')) return 'YouTube';
+      if (s.includes('facebook') || s === 'fb' || s.includes('fb.com') || s.includes('fb.me')) return 'Facebook';
+      if (s.includes('linkedin') || s.includes('lnkd')) return 'LinkedIn';
+      if (s === 't.co' || s.includes('twitter') || s === 'x.com') return 'X';
+      if (s.includes('bing')) return 'Bing';
+      if (s.includes('linktr')) return 'Linktree';
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+    const params = new URLSearchParams(location.search);
+    let origem = params.get('utm_source') || params.get('origem') || '';
+    if (!origem && document.referrer) {
+      try { const r = new URL(document.referrer); if (r.hostname !== location.hostname) origem = r.hostname; } catch (err) { /* segue */ }
+    }
+    const dados = { pagina: (location.pathname || '/').slice(0, 200), origem: nomeDaOrigem(origem).slice(0, 100) };
+    window.banco.auth.getSession().then((r) => {
+      if (r && r.data && r.data.session) return; /* é você, logada: não conta */
+      return window.banco.from('visitas').insert(dados);
+    }).catch(() => {});
+  })();
 })();
 </script>
 </body>
